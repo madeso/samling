@@ -6,12 +6,15 @@ import { Container, Row, Col, Card, Button, Navbar, Nav, Form, Image, ListGroup 
 import { get_mode, load_store, save_mode, save_store, type Item, type Mode, type Store } from './store';
 
 
-const StoreList = (props: { store: Store, setStore: (store: Store) => void }) => {
+const StoreList = (props: { store: Store, setStore: (store: Store) => void, editItem: (it: number) => void }) => {
   return (
     <ListGroup>
       {props.store.items.map((item, item_index) => (
         <ListGroup.Item key={item_index} className="d-flex justify-content-between align-items-center">
-          <span>{item.name}</span>
+          <a href="#" onClick={(ev) => {
+            ev.preventDefault();
+            props.editItem(item_index);
+          }}>{item.name}</a>
           <Button variant="outline-danger" size="sm" onClick={() => {
             const x = structuredClone(props.store);
             x.items.splice(item_index, 1);
@@ -33,7 +36,8 @@ const AddMany = (props: { store: Store, setStore: (store: Store) => void, onClos
       return {
         name: parsedName.trim().replace(/^([0-9]+\s*\.\s*\[)/, ""),
         url: parsedUrl?.trim().replace(/^(\()/, "").replace(/\)\s*$/, "") ?? "",
-        tags: [] };
+        tags: []
+      };
     });
   return (
     <Card className="mt-3">
@@ -46,8 +50,8 @@ const AddMany = (props: { store: Store, setStore: (store: Store) => void, onClos
           <table className="table table-striped table-bordered align-middle">
             <thead>
               <tr>
-                <th style={{width: '40%'}}>Name</th>
-                <th style={{width: '60%'}}>URL</th>
+                <th style={{ width: '40%' }}>Name</th>
+                <th style={{ width: '60%' }}>URL</th>
               </tr>
             </thead>
             <tbody>
@@ -78,8 +82,8 @@ const AddMany = (props: { store: Store, setStore: (store: Store) => void, onClos
   );
 }
 
-const AddEdit = (props: { store: Store, setStore: (store: Store) => void, onClose: () => void }) => {
-  const [item, setItem] = useState<Item>({ name: "", url: "", tags: [] });
+const AddEdit = (props: { index: number | null, store: Store, setStore: (store: Store) => void, onClose: () => void }) => {
+  const [item, setItem] = useState<Item>(() => props.index !== null ? structuredClone(props.store.items[props.index]) : { name: "", url: "", tags: [] });
   return (
     <Card className="mt-3 shadow-sm">
       <Card.Body>
@@ -95,7 +99,13 @@ const AddEdit = (props: { store: Store, setStore: (store: Store) => void, onClos
           <div className="d-flex justify-content-end gap-2 mt-3">
             <Button variant="success" onClick={() => {
               const s = structuredClone(props.store);
-              s.items.push(structuredClone(item));
+              if (props.index !== null) {
+                s.items[props.index] = structuredClone(item);
+              }
+              else {
+                s.items.push(structuredClone(item));
+
+              }
               props.setStore(s);
               props.onClose();
             }}>OK</Button>
@@ -118,6 +128,7 @@ function App() {
     save_store(new_store);
   }
   const [mode, setModeData] = useState<Mode>(() => get_mode() ?? "list");
+  const [editingItem, setEditingItem] = useState<number | null>(null);
   const setMode = (m: Mode) => {
     setModeData(m);
     save_mode(m);
@@ -145,9 +156,12 @@ function App() {
         <Row className="justify-content-md-center">
           <Col md={8}>
             <main>
-              {mode === 'add' && (<AddEdit store={store} setStore={setStore} onClose={() => { setMode('list'); }} />)}
-              {mode === 'list' && (<StoreList store={store} setStore={setStore} />)}
-              {mode === 'add_many' && (<AddMany store={store} setStore={setStore} onClose={() => { setMode('list'); }} />)}
+              {editingItem !== null && (<AddEdit index={editingItem} store={store} setStore={setStore} onClose={() => { setMode('list'); setEditingItem(null); }} />)}
+              {editingItem === null && (<>
+                {mode === 'add' && (<AddEdit index={null} store={store} setStore={setStore} onClose={() => { setMode('list'); }} />)}
+                {mode === 'list' && (<StoreList store={store} setStore={setStore} editItem={(item => { setEditingItem(item) })} />)}
+                {mode === 'add_many' && (<AddMany store={store} setStore={setStore} onClose={() => { setMode('list'); }} />)}
+              </>)}
             </main>
           </Col>
         </Row>
