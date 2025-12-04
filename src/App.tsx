@@ -107,34 +107,41 @@ const CardDialog = (props: React.PropsWithChildren) =>
     <Card.Body>{props.children}</Card.Body>
   </Card>;
 
+const add_tag = (tags: string[], tagToAdd: string): string[] =>
+  [...tags.filter(tag => tag !== tagToAdd), tagToAdd];
+
 const TagEdit = (props: { tags: string[], setTags: (tags: string[]) => void }) => {
   const [tagInput, setTagInput] = useState("");
 
   const addTag = (tagToAdd: string) => {
     // remove tag if it exist, then add it last
-    props.setTags([...props.tags.filter(tag => tag !== tagToAdd), tagToAdd]);
+    props.setTags(add_tag(props.tags, tagToAdd));
   };
   const removeTag = (tagToRemove: string) => {
     props.setTags(props.tags.filter(t => t !== tagToRemove));
   };
 
+  const add_item_to_tag = () => {
+    const newTag = tagInput.trim();
+    if (newTag) {
+      addTag(newTag);
+      setTagInput("");
+    }
+  };
+
   const onKeyDown = (ev: React.KeyboardEvent<HTMLInputElement>) => {
     if (ev.key === 'Enter' || ev.key === ',' || ev.key === ' ') {
       ev.preventDefault();
-      (() => {
-        const newTag = tagInput.trim();
-        if (newTag) {
-          addTag(newTag);
-          setTagInput("");
-        }
-      })();
+      add_item_to_tag();
     } else if (ev.key === 'Backspace' && tagInput === "" && props.tags.length > 0) {
       ev.preventDefault();
       props.setTags(props.tags.slice(0, -1));
     }
   };
   return (
-    <div className="d-flex flex-wrap align-items-center gap-2" style={{ minHeight: '38px', border: '1px solid #ced4da', borderRadius: '0.375rem', padding: '0.25rem 0.5rem', background: '#fff' }}>
+    <div
+      className="d-flex flex-wrap align-items-center gap-2"
+      style={{ minHeight: '38px', border: '1px solid #ced4da', borderRadius: '0.375rem', padding: '0.25rem 0.5rem', background: '#fff' }}>
       {props.tags.map((tag) => (
         <span key={tag} className="badge bg-primary d-flex align-items-center" style={{ fontSize: '1em', paddingRight: '0.5em' }}>
           {tag}
@@ -148,12 +155,57 @@ const TagEdit = (props: { tags: string[], setTags: (tags: string[]) => void }) =
         value={tagInput}
         onChange={ev => setTagInput(ev.target.value)}
         onKeyDown={onKeyDown}
+        onBlur={() => {
+          add_item_to_tag();
+        }}
         placeholder="Add tag"
         autoComplete="off"
       />
     </div>
   );
 }
+
+const is_excluded = (item: Item, contains: string) => {
+  const item_name = item.name.toLowerCase();
+  const search_term = contains.toLowerCase();
+  const index = item_name.indexOf(search_term);
+  return index < 0;
+}
+
+const AddTagsToFiltered = (props: { store: Store, setStore: (store: Store) => void, onClose: () => void }) => {
+  const [contains, setContains] = useState("");
+  const [newTags, setNewTags] = useState(new Array<string>());
+
+  const onOk = () => {
+    props.setStore({
+      ...props.store, items: props.store.items.map((item): Item => {
+        if (is_excluded(item, contains)) {
+          return item;
+        }
+        return { ...item, tags: item.tags.concat(newTags).reduce(add_tag, []) };
+      })
+    });
+    props.onClose();
+  };
+
+  return (
+    <Form>
+      <Form.Group className="mb-3">
+        <Form.Label className="fw-bold">Name</Form.Label>
+        <Form.Control type="text" value={contains} onChange={ev => setContains(ev.target.value)} placeholder="Enter filter" />
+      </Form.Group>
+      <Form.Group className="mb-3">
+        <Form.Label className="fw-bold">Tags</Form.Label>
+        <TagEdit tags={newTags} setTags={setNewTags} />
+      </Form.Group>
+      <div className="d-flex justify-content-end gap-2 mt-3">
+        <Button variant="success" onClick={onOk}>OK</Button>
+        <Button variant="secondary" onClick={props.onClose}>Abort</Button>
+      </div>
+    </Form>
+  );
+}
+
 
 const AddEdit = (props: { index: number | null, store: Store, setStore: (store: Store) => void, onClose: () => void }) => {
   const [item, setItem] = useState<Item>(() => props.index !== null ? structuredClone(props.store.items[props.index]) : { name: "", url: "", tags: [] });
@@ -225,6 +277,7 @@ function App() {
               <Nav.Link onClick={() => setMode("list")}>List</Nav.Link>
               <Nav.Link onClick={() => setMode("add")}>Add</Nav.Link>
               <Nav.Link onClick={() => setMode("add_many")}>Add Many</Nav.Link>
+              <Nav.Link onClick={() => setMode("add_tags")}>Add Tags</Nav.Link>
             </Nav>
           </Navbar.Collapse>
         </Container>
@@ -237,6 +290,9 @@ function App() {
                 {mode === 'add' && (<CardDialog><AddEdit index={null} store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>)}
                 {mode === 'list' && (<StoreList store={store} setStore={setStore} />)}
                 {mode === 'add_many' && (<CardDialog><AddMany store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>)}
+                {mode === 'add_tags' && (<><CardDialog><AddTagsToFiltered store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>
+                  <StoreList store={store} setStore={setStore} />
+                </>)}
               </>
             </main>
           </Col>
