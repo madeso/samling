@@ -5,22 +5,33 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { Container, Row, Col, Card, Button, Navbar, Nav, Form, Image, ListGroup } from 'react-bootstrap';
 import { get_mode, load_store, save_mode, save_store, type Item, type Mode, type Store } from './store';
 
+const ItemDisplay = (props: {item: Item, item_index: number, store: Store, setStore: (store: Store) => void}) => {
+  const [editing, setEditing] = useState(false);
 
-const StoreList = (props: { store: Store, setStore: (store: Store) => void, editItem: (it: number) => void }) => {
+  const item = editing
+  ? <AddEdit index={props.item_index} store={props.store} setStore={props.setStore} onClose={() => { setEditing(false); }} />
+    : <>
+    <a href="#" onClick={(ev) => {
+      ev.preventDefault();
+      setEditing(true);
+    }}>{props.item.name}</a>
+    <Button variant="outline-danger" size="sm" onClick={() => {
+      const x = structuredClone(props.store);
+      x.items.splice(props.item_index, 1);
+      props.setStore(x);
+    }}>Remove</Button>
+    </>;
+
+  return <ListGroup.Item key={props.item_index} className="d-flex justify-content-between align-items-center">
+    {item}
+  </ListGroup.Item>
+}
+
+const StoreList = (props: { store: Store, setStore: (store: Store) => void }) => {
   return (
     <ListGroup>
       {props.store.items.map((item, item_index) => (
-        <ListGroup.Item key={item_index} className="d-flex justify-content-between align-items-center">
-          <a href="#" onClick={(ev) => {
-            ev.preventDefault();
-            props.editItem(item_index);
-          }}>{item.name}</a>
-          <Button variant="outline-danger" size="sm" onClick={() => {
-            const x = structuredClone(props.store);
-            x.items.splice(item_index, 1);
-            props.setStore(x);
-          }}>Remove</Button>
-        </ListGroup.Item>
+        <ItemDisplay key={item_index} item={item} item_index={item_index} store={props.store} setStore={props.setStore} />
       ))}
     </ListGroup>
   );
@@ -40,8 +51,7 @@ const AddMany = (props: { store: Store, setStore: (store: Store) => void, onClos
       };
     });
   return (
-    <Card className="mt-3">
-      <Card.Body>
+    <>
         <Form.Group className="mb-3">
           <Form.Label>Paste items (one per line)</Form.Label>
           <Form.Control as="textarea" rows={5} value={lines} onChange={ev => setLines(ev.target.value)} />
@@ -77,43 +87,43 @@ const AddMany = (props: { store: Store, setStore: (store: Store) => void, onClos
           props.onClose();
         }}>OK</Button>
         <Button variant="secondary" onClick={props.onClose}>Abort</Button>
-      </Card.Body>
-    </Card>
+      </>
   );
 }
+
+const CardDialog = (props: React.PropsWithChildren) => 
+  <Card className="mt-3 shadow-sm">
+      <Card.Body>{props.children}</Card.Body>
+  </Card>;
 
 const AddEdit = (props: { index: number | null, store: Store, setStore: (store: Store) => void, onClose: () => void }) => {
   const [item, setItem] = useState<Item>(() => props.index !== null ? structuredClone(props.store.items[props.index]) : { name: "", url: "", tags: [] });
   return (
-    <Card className="mt-3 shadow-sm">
-      <Card.Body>
-        <Form>
-          <Form.Group className="mb-3">
-            <Form.Label className="fw-bold">Name</Form.Label>
-            <Form.Control type="text" value={item.name} onChange={ev => setItem(i => ({ ...i, name: ev.target.value }))} placeholder="Enter item name" />
-          </Form.Group>
-          <Form.Group className="mb-3">
-            <Form.Label className="fw-bold">Url</Form.Label>
-            <Form.Control type="text" value={item.url} onChange={ev => setItem(i => ({ ...i, url: ev.target.value }))} placeholder="Enter item URL" />
-          </Form.Group>
-          <div className="d-flex justify-content-end gap-2 mt-3">
-            <Button variant="success" onClick={() => {
-              const s = structuredClone(props.store);
-              if (props.index !== null) {
-                s.items[props.index] = structuredClone(item);
-              }
-              else {
-                s.items.push(structuredClone(item));
+      <Form>
+        <Form.Group className="mb-3">
+          <Form.Label className="fw-bold">Name</Form.Label>
+          <Form.Control type="text" value={item.name} onChange={ev => setItem(i => ({ ...i, name: ev.target.value }))} placeholder="Enter item name" />
+        </Form.Group>
+        <Form.Group className="mb-3">
+          <Form.Label className="fw-bold">Url</Form.Label>
+          <Form.Control type="text" value={item.url} onChange={ev => setItem(i => ({ ...i, url: ev.target.value }))} placeholder="Enter item URL" />
+        </Form.Group>
+        <div className="d-flex justify-content-end gap-2 mt-3">
+          <Button variant="success" onClick={() => {
+            const s = structuredClone(props.store);
+            if (props.index !== null) {
+              s.items[props.index] = structuredClone(item);
+            }
+            else {
+              s.items.push(structuredClone(item));
 
-              }
-              props.setStore(s);
-              props.onClose();
-            }}>OK</Button>
-            <Button variant="secondary" onClick={props.onClose}>Abort</Button>
-          </div>
-        </Form>
-      </Card.Body>
-    </Card>
+            }
+            props.setStore(s);
+            props.onClose();
+          }}>OK</Button>
+          <Button variant="secondary" onClick={props.onClose}>Abort</Button>
+        </div>
+      </Form>
   );
 }
 
@@ -128,7 +138,6 @@ function App() {
     save_store(new_store);
   }
   const [mode, setModeData] = useState<Mode>(() => get_mode() ?? "list");
-  const [editingItem, setEditingItem] = useState<number | null>(null);
   const setMode = (m: Mode) => {
     setModeData(m);
     save_mode(m);
@@ -156,12 +165,11 @@ function App() {
         <Row className="justify-content-md-center">
           <Col md={8}>
             <main>
-              {editingItem !== null && (<AddEdit index={editingItem} store={store} setStore={setStore} onClose={() => { setMode('list'); setEditingItem(null); }} />)}
-              {editingItem === null && (<>
-                {mode === 'add' && (<AddEdit index={null} store={store} setStore={setStore} onClose={() => { setMode('list'); }} />)}
-                {mode === 'list' && (<StoreList store={store} setStore={setStore} editItem={(item => { setEditingItem(item) })} />)}
-                {mode === 'add_many' && (<AddMany store={store} setStore={setStore} onClose={() => { setMode('list'); }} />)}
-              </>)}
+              <>
+                {mode === 'add' && (<CardDialog><AddEdit index={null} store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>)}
+                {mode === 'list' && (<StoreList store={store} setStore={setStore} />)}
+                {mode === 'add_many' && (<CardDialog><AddMany store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>)}
+              </>
             </main>
           </Col>
         </Row>
