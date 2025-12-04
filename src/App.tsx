@@ -5,24 +5,24 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { Container, Row, Col, Card, Button, Navbar, Nav, Form, Image, ListGroup } from 'react-bootstrap';
 import { get_mode, load_store, save_mode, save_store, type Item, type Mode, type Store } from './store';
 
-const ItemDisplay = (props: {item: Item, item_index: number, store: Store, setStore: (store: Store) => void}) => {
+const ItemDisplay = (props: { item: Item, item_index: number, store: Store, setStore: (store: Store) => void }) => {
   const [editing, setEditing] = useState(false);
 
   const item = editing
-  ? <AddEdit index={props.item_index} store={props.store} setStore={props.setStore} onClose={() => { setEditing(false); }} />
-    : <>
-    <a href="#" onClick={(ev) => {
-      ev.preventDefault();
-      setEditing(true);
-    }}>{props.item.name}</a>
-    <Button variant="outline-danger" size="sm" onClick={() => {
-      const x = structuredClone(props.store);
-      x.items.splice(props.item_index, 1);
-      props.setStore(x);
-    }}>Remove</Button>
-    </>;
+    ? <AddEdit index={props.item_index} store={props.store} setStore={props.setStore} onClose={() => { setEditing(false); }} />
+    : <div className="d-flex justify-content-between align-items-center w-100">
+      <a href="#" onClick={(ev) => {
+        ev.preventDefault();
+        setEditing(true);
+      }}>{props.item.name}</a>
+      <Button variant="outline-danger" size="sm" onClick={() => {
+        const x = structuredClone(props.store);
+        x.items.splice(props.item_index, 1);
+        props.setStore(x);
+      }}>Remove</Button>
+    </div>;
 
-  return <ListGroup.Item key={props.item_index} className="d-flex justify-content-between align-items-center">
+  return <ListGroup.Item key={props.item_index} className="d-flex flex-column align-items-stretch">
     {item}
   </ListGroup.Item>
 }
@@ -52,78 +52,115 @@ const AddMany = (props: { store: Store, setStore: (store: Store) => void, onClos
     });
   return (
     <>
-        <Form.Group className="mb-3">
-          <Form.Label>Paste items (one per line)</Form.Label>
-          <Form.Control as="textarea" rows={5} value={lines} onChange={ev => setLines(ev.target.value)} />
-        </Form.Group>
-        <div className="mb-3">
-          <table className="table table-striped table-bordered align-middle">
-            <thead>
-              <tr>
-                <th style={{ width: '40%' }}>Name</th>
-                <th style={{ width: '60%' }}>URL</th>
+      <Form.Group className="mb-3">
+        <Form.Label>Paste items (one per line)</Form.Label>
+        <Form.Control as="textarea" rows={5} value={lines} onChange={ev => setLines(ev.target.value)} />
+      </Form.Group>
+      <div className="mb-3">
+        <table className="table table-striped table-bordered align-middle">
+          <thead>
+            <tr>
+              <th style={{ width: '40%' }}>Name</th>
+              <th style={{ width: '60%' }}>URL</th>
+            </tr>
+          </thead>
+          <tbody>
+            {parsed.map((item, item_index) => (
+              <tr key={item_index}>
+                <td className="fw-bold">{item.name}</td>
+                <td>
+                  {item.url ? (
+                    <a href={item.url} target="_blank" rel="noopener noreferrer">{item.url}</a>
+                  ) : <span className="text-muted">(none)</span>}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {parsed.map((item, item_index) => (
-                <tr key={item_index}>
-                  <td className="fw-bold">{item.name}</td>
-                  <td>
-                    {item.url ? (
-                      <a href={item.url} target="_blank" rel="noopener noreferrer">{item.url}</a>
-                    ) : <span className="text-muted">(none)</span>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <Button variant="success" className="me-2" onClick={() => {
+        const s = structuredClone(props.store);
+        for (const i of parsed) {
+          s.items.push(i);
+        }
+        props.setStore(s);
+        props.onClose();
+      }}>OK</Button>
+      <Button variant="secondary" onClick={props.onClose}>Abort</Button>
+    </>
+  );
+}
+
+const CardDialog = (props: React.PropsWithChildren) =>
+  <Card className="mt-3 shadow-sm">
+    <Card.Body>{props.children}</Card.Body>
+  </Card>;
+
+const AddEdit = (props: { index: number | null, store: Store, setStore: (store: Store) => void, onClose: () => void }) => {
+  const [item, setItem] = useState<Item>(() => props.index !== null ? structuredClone(props.store.items[props.index]) : { name: "", url: "", tags: [] });
+  const [tagInput, setTagInput] = useState("");
+  const addTag = () => {
+    const newTag = tagInput.trim();
+    if (newTag && !item.tags.includes(newTag)) {
+      setItem(i => ({ ...i, tags: [...i.tags, newTag] }));
+      setTagInput("");
+    }
+  };
+  return (
+    <Form>
+      <Form.Group className="mb-3">
+        <Form.Label className="fw-bold">Name</Form.Label>
+        <Form.Control type="text" value={item.name} onChange={ev => setItem(i => ({ ...i, name: ev.target.value }))} placeholder="Enter item name" />
+      </Form.Group>
+      <Form.Group className="mb-3">
+        <Form.Label className="fw-bold">Url</Form.Label>
+        <Form.Control type="text" value={item.url} onChange={ev => setItem(i => ({ ...i, url: ev.target.value }))} placeholder="Enter item URL" />
+      </Form.Group>
+      <Form.Group className="mb-3">
+        <Form.Label className="fw-bold">Tags</Form.Label>
+        <div className="mb-2">
+          {item.tags.map((tag, idx) => (
+            <span key={idx} className="badge bg-primary me-2">
+              {tag}
+              <Button variant="light" size="sm" className="ms-2 py-0 px-1" style={{ lineHeight: 1 }} onClick={() => ((tag: string) => {
+                setItem(i => ({ ...i, tags: i.tags.filter(t => t !== tag) }));
+              })(tag)}>
+                &times;
+              </Button>
+            </span>
+          ))}
         </div>
-        <Button variant="success" className="me-2" onClick={() => {
+        <div className="d-flex">
+          <Form.Control
+            type="text"
+            value={tagInput}
+            onChange={ev => setTagInput(ev.target.value)}
+            placeholder="Add tag"
+            onKeyDown={ev => {
+              if (ev.key === 'Enter') {
+                ev.preventDefault();
+                addTag();
+              }
+            }}
+          />
+          <Button variant="secondary" className="ms-2" onClick={addTag}>Add</Button>
+        </div>
+      </Form.Group>
+      <div className="d-flex justify-content-end gap-2 mt-3">
+        <Button variant="success" onClick={() => {
           const s = structuredClone(props.store);
-          for (const i of parsed) {
-            s.items.push(i);
+          if (props.index !== null) {
+            s.items[props.index] = structuredClone(item);
+          }
+          else {
+            s.items.push(structuredClone(item));
           }
           props.setStore(s);
           props.onClose();
         }}>OK</Button>
         <Button variant="secondary" onClick={props.onClose}>Abort</Button>
-      </>
-  );
-}
-
-const CardDialog = (props: React.PropsWithChildren) => 
-  <Card className="mt-3 shadow-sm">
-      <Card.Body>{props.children}</Card.Body>
-  </Card>;
-
-const AddEdit = (props: { index: number | null, store: Store, setStore: (store: Store) => void, onClose: () => void }) => {
-  const [item, setItem] = useState<Item>(() => props.index !== null ? structuredClone(props.store.items[props.index]) : { name: "", url: "", tags: [] });
-  return (
-      <Form>
-        <Form.Group className="mb-3">
-          <Form.Label className="fw-bold">Name</Form.Label>
-          <Form.Control type="text" value={item.name} onChange={ev => setItem(i => ({ ...i, name: ev.target.value }))} placeholder="Enter item name" />
-        </Form.Group>
-        <Form.Group className="mb-3">
-          <Form.Label className="fw-bold">Url</Form.Label>
-          <Form.Control type="text" value={item.url} onChange={ev => setItem(i => ({ ...i, url: ev.target.value }))} placeholder="Enter item URL" />
-        </Form.Group>
-        <div className="d-flex justify-content-end gap-2 mt-3">
-          <Button variant="success" onClick={() => {
-            const s = structuredClone(props.store);
-            if (props.index !== null) {
-              s.items[props.index] = structuredClone(item);
-            }
-            else {
-              s.items.push(structuredClone(item));
-
-            }
-            props.setStore(s);
-            props.onClose();
-          }}>OK</Button>
-          <Button variant="secondary" onClick={props.onClose}>Abort</Button>
-        </div>
-      </Form>
+      </div>
+    </Form>
   );
 }
 
