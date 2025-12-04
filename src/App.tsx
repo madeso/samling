@@ -109,40 +109,38 @@ const CardDialog = (props: React.PropsWithChildren) =>
 
 const TagEdit = (props: { tags: string[], addTag: (tag: string) => void, removeTag: (tag: string) => void }) => {
   const [tagInput, setTagInput] = useState("");
-  const addTag = () => {
-    const newTag = tagInput.trim();
-    if (newTag) {
-      props.addTag(newTag);
-      setTagInput("");
+  const onKeyDown = (ev: React.KeyboardEvent<HTMLInputElement>) => {
+    if (ev.key === 'Enter' || ev.key === ',' || ev.key === ' ') {
+      ev.preventDefault();
+      (() => {
+        const newTag = tagInput.trim();
+        if (newTag && !props.tags.includes(newTag)) {
+          props.addTag(newTag);
+          setTagInput("");
+        }
+      })();
     }
   };
-  return <><div className="mb-2">
-    {props.tags.map((tag, idx) => (
-      <span key={idx} className="badge bg-primary me-2">
-        {tag}
-        <Button variant="light" size="sm" className="ms-2 py-0 px-1" style={{ lineHeight: 1 }} onClick={() => ((tag: string) => {
-          props.removeTag(tag);
-        })(tag)}>
-          &times;
-        </Button>
-      </span>
-    ))}
-  </div>
-    <div className="d-flex">
-      <Form.Control
+  return (
+    <div className="d-flex flex-wrap align-items-center gap-2" style={{ minHeight: '38px', border: '1px solid #ced4da', borderRadius: '0.375rem', padding: '0.25rem 0.5rem', background: '#fff' }}>
+      {props.tags.map((tag) => (
+        <span key={tag} className="badge bg-primary d-flex align-items-center" style={{ fontSize: '1em', paddingRight: '0.5em' }}>
+          {tag}
+          <button type="button" className="btn-close btn-close-white ms-2" style={{ fontSize: '0.7em' }} aria-label="Remove" onClick={() => props.removeTag(tag)}></button>
+        </span>
+      ))}
+      <input
         type="text"
+        className="form-control border-0 shadow-none p-0 m-0"
+        style={{ width: 'auto', minWidth: '80px', flex: '1 0 120px' }}
         value={tagInput}
         onChange={ev => setTagInput(ev.target.value)}
+        onKeyDown={onKeyDown}
         placeholder="Add tag"
-        onKeyDown={ev => {
-          if (ev.key === 'Enter') {
-            ev.preventDefault();
-            addTag();
-          }
-        }}
+        autoComplete="off"
       />
-      <Button variant="secondary" className="ms-2" onClick={addTag}>Add</Button>
-    </div></>;
+    </div>
+  );
 }
 
 const AddEdit = (props: { index: number | null, store: Store, setStore: (store: Store) => void, onClose: () => void }) => {
