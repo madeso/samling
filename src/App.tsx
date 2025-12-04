@@ -111,8 +111,8 @@ const TagEdit = (props: { tags: string[], setTags: (tags: string[]) => void }) =
   const [tagInput, setTagInput] = useState("");
 
   const addTag = (tagToAdd: string) => {
-    if (props.tags.includes(tagToAdd)) { return; }
-    props.setTags([...props.tags, tagToAdd]);
+    // remove tag if it exist, then add it last
+    props.setTags([...props.tags.filter(tag => tag !== tagToAdd), tagToAdd]);
   };
   const removeTag = (tagToRemove: string) => {
     props.setTags(props.tags.filter(t => t !== tagToRemove));
@@ -123,11 +123,14 @@ const TagEdit = (props: { tags: string[], setTags: (tags: string[]) => void }) =
       ev.preventDefault();
       (() => {
         const newTag = tagInput.trim();
-        if (newTag && !props.tags.includes(newTag)) {
+        if (newTag) {
           addTag(newTag);
           setTagInput("");
         }
       })();
+    } else if (ev.key === 'Backspace' && tagInput === "" && props.tags.length > 0) {
+      ev.preventDefault();
+      props.setTags(props.tags.slice(0, -1));
     }
   };
   return (
