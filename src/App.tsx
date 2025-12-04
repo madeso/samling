@@ -10,17 +10,28 @@ const ItemDisplay = (props: { item: Item, item_index: number, store: Store, setS
 
   const item = editing
     ? <AddEdit index={props.item_index} store={props.store} setStore={props.setStore} onClose={() => { setEditing(false); }} />
-    : <div className="d-flex justify-content-between align-items-center w-100">
-      <a href="#" onClick={(ev) => {
-        ev.preventDefault();
-        setEditing(true);
-      }}>{props.item.name}</a>
-      <Button variant="outline-danger" size="sm" onClick={() => {
-        const x = structuredClone(props.store);
-        x.items.splice(props.item_index, 1);
-        props.setStore(x);
-      }}>Remove</Button>
-    </div>;
+    : (
+      <div className="w-100">
+        <div className="d-flex align-items-center justify-content-between">
+          <div className="d-flex align-items-center flex-wrap text-start">
+            <a href="#" className="fw-bold text-decoration-none me-3" onClick={(ev) => {
+              ev.preventDefault();
+              setEditing(true);
+            }}>{props.item.name}</a>
+            {props.item.tags && props.item.tags.length > 0 && (
+              props.item.tags.map((tag, idx) => (
+                <span key={idx} className="badge bg-primary me-2">{tag}</span>
+              ))
+            )}
+          </div>
+          <Button variant="outline-danger" size="sm" onClick={() => {
+            const x = structuredClone(props.store);
+            x.items.splice(props.item_index, 1);
+            props.setStore(x);
+          }}>Remove</Button>
+        </div>
+      </div>
+    );
 
   return <ListGroup.Item key={props.item_index} className="d-flex flex-column align-items-stretch">
     {item}
