@@ -107,15 +107,24 @@ const CardDialog = (props: React.PropsWithChildren) =>
     <Card.Body>{props.children}</Card.Body>
   </Card>;
 
-const TagEdit = (props: { tags: string[], addTag: (tag: string) => void, removeTag: (tag: string) => void }) => {
+const TagEdit = (props: { tags: string[], setTags: (tags: string[]) => void }) => {
   const [tagInput, setTagInput] = useState("");
+
+  const addTag = (tagToAdd: string) => {
+    if (props.tags.includes(tagToAdd)) { return; }
+    props.setTags([...props.tags, tagToAdd]);
+  };
+  const removeTag = (tagToRemove: string) => {
+    props.setTags(props.tags.filter(t => t !== tagToRemove));
+  };
+
   const onKeyDown = (ev: React.KeyboardEvent<HTMLInputElement>) => {
     if (ev.key === 'Enter' || ev.key === ',' || ev.key === ' ') {
       ev.preventDefault();
       (() => {
         const newTag = tagInput.trim();
         if (newTag && !props.tags.includes(newTag)) {
-          props.addTag(newTag);
+          addTag(newTag);
           setTagInput("");
         }
       })();
@@ -126,7 +135,7 @@ const TagEdit = (props: { tags: string[], addTag: (tag: string) => void, removeT
       {props.tags.map((tag) => (
         <span key={tag} className="badge bg-primary d-flex align-items-center" style={{ fontSize: '1em', paddingRight: '0.5em' }}>
           {tag}
-          <button type="button" className="btn-close btn-close-white ms-2" style={{ fontSize: '0.7em' }} aria-label="Remove" onClick={() => props.removeTag(tag)}></button>
+          <button type="button" className="btn-close btn-close-white ms-2" style={{ fontSize: '0.7em' }} aria-label="Remove" onClick={() => removeTag(tag)}></button>
         </span>
       ))}
       <input
@@ -146,12 +155,8 @@ const TagEdit = (props: { tags: string[], addTag: (tag: string) => void, removeT
 const AddEdit = (props: { index: number | null, store: Store, setStore: (store: Store) => void, onClose: () => void }) => {
   const [item, setItem] = useState<Item>(() => props.index !== null ? structuredClone(props.store.items[props.index]) : { name: "", url: "", tags: [] });
 
-  const addTag = (tagToAdd: string) => {
-    if (item.tags.includes(tagToAdd)) { return; }
-    setItem(i => ({ ...i, tags: [...i.tags, tagToAdd] }));
-  };
-  const removeTag = (tagToRemove: string) => {
-    setItem(i => ({ ...i, tags: i.tags.filter(t => t !== tagToRemove) }));
+  const setTags = (newTags: string[]) => {
+    setItem(i => ({ ...i, tags: newTags }));
   };
   const onOk = () => {
     const s = structuredClone(props.store);
@@ -177,7 +182,7 @@ const AddEdit = (props: { index: number | null, store: Store, setStore: (store: 
       </Form.Group>
       <Form.Group className="mb-3">
         <Form.Label className="fw-bold">Tags</Form.Label>
-        <TagEdit tags={item.tags} addTag={addTag} removeTag={removeTag} />
+        <TagEdit tags={item.tags} setTags={setTags} />
       </Form.Group>
       <div className="d-flex justify-content-end gap-2 mt-3">
         <Button variant="success" onClick={onOk}>OK</Button>
