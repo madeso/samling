@@ -5,6 +5,11 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { Container, Row, Col, Card, Button, Navbar, Nav, Form, Image, ListGroup } from 'react-bootstrap';
 import { get_mode, load_store, save_mode, save_store, type Item, type Mode, type Store } from './store';
 
+import Icon from '@mdi/react';
+import { mdiDelete } from '@mdi/js';
+
+const DeleteIcon = () => <Icon path={mdiDelete} size={1} color="red" title={"Delete"} />;
+
 const ItemDisplay = (props: { item: Item, item_index: number, store: Store, setStore: (store: Store) => void }) => {
   const [editing, setEditing] = useState(false);
 
@@ -28,7 +33,7 @@ const ItemDisplay = (props: { item: Item, item_index: number, store: Store, setS
             const x = structuredClone(props.store);
             x.items.splice(props.item_index, 1);
             props.setStore(x);
-          }}>Remove</Button>
+          }}><DeleteIcon /></Button>
         </div>
       </div>
     );

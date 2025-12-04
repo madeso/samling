@@ -10,10 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
+    "@mdi/js": "^7.4.47",
+    "@mdi/react": "^1.6.1",
     "bootstrap": "^5.3.3",
-    "react-bootstrap": "^2.10.4"
+    "react": "^19.2.0",
+    "react-bootstrap": "^2.10.4",
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
