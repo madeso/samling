@@ -107,16 +107,66 @@ const CardDialog = (props: React.PropsWithChildren) =>
     <Card.Body>{props.children}</Card.Body>
   </Card>;
 
-const AddEdit = (props: { index: number | null, store: Store, setStore: (store: Store) => void, onClose: () => void }) => {
-  const [item, setItem] = useState<Item>(() => props.index !== null ? structuredClone(props.store.items[props.index]) : { name: "", url: "", tags: [] });
+const TagEdit = (props: { tags: string[], addTag: (tag: string) => void, removeTag: (tag: string) => void }) => {
   const [tagInput, setTagInput] = useState("");
   const addTag = () => {
     const newTag = tagInput.trim();
-    if (newTag && !item.tags.includes(newTag)) {
-      setItem(i => ({ ...i, tags: [...i.tags, newTag] }));
+    if (newTag) {
+      props.addTag(newTag);
       setTagInput("");
     }
   };
+  return <><div className="mb-2">
+    {props.tags.map((tag, idx) => (
+      <span key={idx} className="badge bg-primary me-2">
+        {tag}
+        <Button variant="light" size="sm" className="ms-2 py-0 px-1" style={{ lineHeight: 1 }} onClick={() => ((tag: string) => {
+          props.removeTag(tag);
+        })(tag)}>
+          &times;
+        </Button>
+      </span>
+    ))}
+  </div>
+    <div className="d-flex">
+      <Form.Control
+        type="text"
+        value={tagInput}
+        onChange={ev => setTagInput(ev.target.value)}
+        placeholder="Add tag"
+        onKeyDown={ev => {
+          if (ev.key === 'Enter') {
+            ev.preventDefault();
+            addTag();
+          }
+        }}
+      />
+      <Button variant="secondary" className="ms-2" onClick={addTag}>Add</Button>
+    </div></>;
+}
+
+const AddEdit = (props: { index: number | null, store: Store, setStore: (store: Store) => void, onClose: () => void }) => {
+  const [item, setItem] = useState<Item>(() => props.index !== null ? structuredClone(props.store.items[props.index]) : { name: "", url: "", tags: [] });
+
+  const addTag = (tagToAdd: string) => {
+    if (item.tags.includes(tagToAdd)) { return; }
+    setItem(i => ({ ...i, tags: [...i.tags, tagToAdd] }));
+  };
+  const removeTag = (tagToRemove: string) => {
+    setItem(i => ({ ...i, tags: i.tags.filter(t => t !== tagToRemove) }));
+  };
+  const onOk = () => {
+    const s = structuredClone(props.store);
+    if (props.index !== null) {
+      s.items[props.index] = structuredClone(item);
+    }
+    else {
+      s.items.push(structuredClone(item));
+    }
+    props.setStore(s);
+    props.onClose();
+  };
+
   return (
     <Form>
       <Form.Group className="mb-3">
@@ -129,46 +179,10 @@ const AddEdit = (props: { index: number | null, store: Store, setStore: (store: 
       </Form.Group>
       <Form.Group className="mb-3">
         <Form.Label className="fw-bold">Tags</Form.Label>
-        <div className="mb-2">
-          {item.tags.map((tag, idx) => (
-            <span key={idx} className="badge bg-primary me-2">
-              {tag}
-              <Button variant="light" size="sm" className="ms-2 py-0 px-1" style={{ lineHeight: 1 }} onClick={() => ((tag: string) => {
-                setItem(i => ({ ...i, tags: i.tags.filter(t => t !== tag) }));
-              })(tag)}>
-                &times;
-              </Button>
-            </span>
-          ))}
-        </div>
-        <div className="d-flex">
-          <Form.Control
-            type="text"
-            value={tagInput}
-            onChange={ev => setTagInput(ev.target.value)}
-            placeholder="Add tag"
-            onKeyDown={ev => {
-              if (ev.key === 'Enter') {
-                ev.preventDefault();
-                addTag();
-              }
-            }}
-          />
-          <Button variant="secondary" className="ms-2" onClick={addTag}>Add</Button>
-        </div>
+        <TagEdit tags={item.tags} addTag={addTag} removeTag={removeTag} />
       </Form.Group>
       <div className="d-flex justify-content-end gap-2 mt-3">
-        <Button variant="success" onClick={() => {
-          const s = structuredClone(props.store);
-          if (props.index !== null) {
-            s.items[props.index] = structuredClone(item);
-          }
-          else {
-            s.items.push(structuredClone(item));
-          }
-          props.setStore(s);
-          props.onClose();
-        }}>OK</Button>
+        <Button variant="success" onClick={onOk}>OK</Button>
         <Button variant="secondary" onClick={props.onClose}>Abort</Button>
       </div>
     </Form>
