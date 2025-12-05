@@ -7,6 +7,7 @@ import { get_mode, load_store, save_mode, save_store, type Item, type Mode, type
 
 import Icon from '@mdi/react';
 import { mdiDelete } from '@mdi/js';
+import { KeyValueExtractor } from './extractor';
 
 const DeleteIcon = () => <Icon path={mdiDelete} size={1} color="red" title={"Delete"} />;
 
@@ -106,6 +107,58 @@ const AddMany = (props: { store: Store, setStore: (store: Store) => void, onClos
     </>
   );
 }
+
+
+const AddAdvanced = (props: { store: Store, setStore: (store: Store) => void, onClose: () => void }) => {
+  const [lines, setLines] = useState<string>("");
+  const [pattern, setPattern] = useState<string>("");
+
+  const [extractor, patternError] = KeyValueExtractor.compile(pattern, 'string');
+  const parsed = lines.split('\n')
+    .filter(x => x.trim() !== '')
+    .map(x => extractor.extractFromFile(x));
+
+  const columns = [...new Set(parsed.flatMap(x => [...x.result.keys()])).values()];
+
+  return (
+    <>
+      <Form.Group className="mb-3">
+        <Form.Label>Paste items (one per line)</Form.Label>
+        <Form.Control as="textarea" rows={5} value={lines} onChange={ev => setLines(ev.target.value)} />
+      </Form.Group>
+      <Form.Group className="mb-3">
+        <Form.Label className="fw-bold">Pattern{patternError !== null ? ` ({patternError})` : ''}</Form.Label>
+        <Form.Control type="text" value={pattern} onChange={ev => setPattern(ev.target.value)} placeholder="Enter pattern" />
+      </Form.Group>
+      <div className="mb-3">
+        <table className="table table-striped table-bordered align-middle">
+          <thead>
+            <tr>
+              {columns.map((col, col_index) => <th key={col_index}>{col}</th>)}
+              {columns.length == 0 && <th>Error</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {parsed.map((item, item_index) => (
+              <tr key={item_index}>
+                {columns.map((column, column_index) => <td key={column_index}>{item.result.get(column)}</td>)}
+                {item.message !== null && <td className="fw-bold" colSpan={Math.min(1, columns.length)}>{item.message}</td>}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <Button variant="success" className="me-2" onClick={() => {
+        const s = structuredClone(props.store);
+        // todo(Gustav): implement me
+        props.setStore(s);
+        props.onClose();
+      }}>OK</Button>
+      <Button variant="secondary" onClick={props.onClose}>Abort</Button>
+    </>
+  );
+}
+
 
 const CardDialog = (props: React.PropsWithChildren) =>
   <Card className="mt-3 shadow-sm">
@@ -282,6 +335,7 @@ function App() {
               <Nav.Link onClick={() => setMode("list")}>List</Nav.Link>
               <Nav.Link onClick={() => setMode("add")}>Add</Nav.Link>
               <Nav.Link onClick={() => setMode("add_many")}>Add Many</Nav.Link>
+              <Nav.Link onClick={() => setMode("add_pattern")}>Add Pattern</Nav.Link>
               <Nav.Link onClick={() => setMode("add_tags")}>Add Tags</Nav.Link>
             </Nav>
           </Navbar.Collapse>
@@ -295,6 +349,7 @@ function App() {
                 {mode === 'add' && (<CardDialog><AddEdit index={null} store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>)}
                 {mode === 'list' && (<StoreList store={store} setStore={setStore} />)}
                 {mode === 'add_many' && (<CardDialog><AddMany store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>)}
+                {mode === 'add_pattern' && (<CardDialog><AddAdvanced store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>)}
                 {mode === 'add_tags' && (<><CardDialog><AddTagsToFiltered store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>
                   <StoreList store={store} setStore={setStore} />
                 </>)}
