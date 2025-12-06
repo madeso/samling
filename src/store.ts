@@ -1,17 +1,20 @@
 const LOCAL_STORAGE_KEY = "store";
 const MODE_STORAGE_KEY = "mode";
 
-export type Mode = "list" | "add" | "add_many" | "add_pattern" | "add_tags";
+export type Mode = "list" | "add" | "add_pattern" | "add_tags";
 
-export interface Item {
-  name: string;
-  url: string;
+interface GenericItem<T> {
+  properties: T;
   tags: string[];
 }
 
-export interface Store {
-  items: Item[];
+interface GenericStore<T> {
+  items: GenericItem<T>[];
 }
+
+type AppProperties = Map<string, string>;
+export type Item = GenericItem<AppProperties>;
+export type Store = GenericStore<AppProperties>;
 
 export const get_mode = (): Mode | null => {
   try {
@@ -29,6 +32,12 @@ export const save_mode = (str: Mode) => {
   }
 };
 
+type SerializedProps = [string, string][];
+const export_props = (value: AppProperties): SerializedProps => [
+  ...value.entries(),
+];
+const import_props = (value: SerializedProps): AppProperties => new Map(value);
+
 export const load_store = (): Store | null => {
   const source = (() => {
     try {
@@ -40,17 +49,28 @@ export const load_store = (): Store | null => {
   })();
   if (source === null) return null;
   const object = JSON.parse(source);
-  const parsed = object as Store | null | undefined;
+  const parsed = object as GenericStore<SerializedProps> | null | undefined;
   if (parsed === null || parsed === undefined) {
     console.warn("Failed to parse local storage json", source, parsed);
     return null;
   }
 
-  return parsed;
+  return {
+    ...parsed,
+    items: parsed.items.map((item) => {
+      return { ...item, properties: import_props(item.properties) };
+    }),
+  };
 };
-export const save_store = (theme: Store) => {
+export const save_store = (store: Store) => {
   try {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(theme));
+    const exported_store: GenericStore<SerializedProps> = {
+      ...store,
+      items: store.items.map((item) => {
+        return { ...item, properties: export_props(item.properties) };
+      }),
+    };
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(exported_store));
   } catch (x) {
     console.warn("Failure to save to local storage", x);
   }

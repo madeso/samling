@@ -8,11 +8,19 @@ import { get_mode, load_store, save_mode, save_store, type Item, type Mode, type
 import Icon from '@mdi/react';
 import { mdiDelete } from '@mdi/js';
 import { KeyValueExtractor } from './extractor';
+import { DefaultFunctions, parse_pattern, type EvalFunction } from './pattern';
 
 const DeleteIcon = () => <Icon path={mdiDelete} size={1} color="red" title={"Delete"} />;
 
-const ItemDisplay = (props: { item: Item, item_index: number, store: Store, setStore: (store: Store) => void }) => {
+const evaluation = (evala: EvalFunction, properties: Map<string, string>): string => {
+  const display = evala(DefaultFunctions(), properties);
+  return typeof display === 'string' ? display : display.type
+}
+
+const ItemDisplay = (props: { eval: EvalFunction, item: Item, item_index: number, store: Store, setStore: (store: Store) => void }) => {
   const [editing, setEditing] = useState(false);
+
+  const display = evaluation(props.eval, props.item.properties);
 
   const item = editing
     ? <AddEdit index={props.item_index} store={props.store} setStore={props.setStore} onClose={() => { setEditing(false); }} />
@@ -23,7 +31,7 @@ const ItemDisplay = (props: { item: Item, item_index: number, store: Store, setS
             <a href="#" className="fw-bold text-decoration-none me-3" onClick={(ev) => {
               ev.preventDefault();
               setEditing(true);
-            }}>{props.item.name}</a>
+            }}>{display}</a>
             {props.item.tags && props.item.tags.length > 0 && (
               props.item.tags.map((tag, idx) => (
                 <span key={idx} className="badge bg-primary me-2">{tag}</span>
@@ -44,70 +52,15 @@ const ItemDisplay = (props: { item: Item, item_index: number, store: Store, setS
   </ListGroup.Item>
 }
 
-const StoreList = (props: { store: Store, setStore: (store: Store) => void }) => {
+const StoreList = (props: { eval: EvalFunction, store: Store, setStore: (store: Store) => void }) => {
   return (
     <ListGroup>
       {props.store.items.map((item, item_index) => (
-        <ItemDisplay key={item_index} item={item} item_index={item_index} store={props.store} setStore={props.setStore} />
+        <ItemDisplay eval={props.eval} key={item_index} item={item} item_index={item_index} store={props.store} setStore={props.setStore} />
       ))}
     </ListGroup>
   );
 }
-
-const AddMany = (props: { store: Store, setStore: (store: Store) => void, onClose: () => void }) => {
-  const [lines, setLines] = useState<string>("");
-  const parsed = lines.split('\n')
-    .map(x => x.trim())
-    .filter(x => x !== '')
-    .map(x => {
-      const [parsedName, parsedUrl] = x.split(']', 2);
-      return {
-        name: parsedName.trim().replace(/^([0-9]+\s*\.\s*\[)/, ""),
-        url: parsedUrl?.trim().replace(/^(\()/, "").replace(/\)\s*$/, "") ?? "",
-        tags: []
-      };
-    });
-  return (
-    <>
-      <Form.Group className="mb-3">
-        <Form.Label>Paste items (one per line)</Form.Label>
-        <Form.Control as="textarea" rows={5} value={lines} onChange={ev => setLines(ev.target.value)} />
-      </Form.Group>
-      <div className="mb-3">
-        <table className="table table-striped table-bordered align-middle">
-          <thead>
-            <tr>
-              <th style={{ width: '40%' }}>Name</th>
-              <th style={{ width: '60%' }}>URL</th>
-            </tr>
-          </thead>
-          <tbody>
-            {parsed.map((item, item_index) => (
-              <tr key={item_index}>
-                <td className="fw-bold">{item.name}</td>
-                <td>
-                  {item.url ? (
-                    <a href={item.url} target="_blank" rel="noopener noreferrer">{item.url}</a>
-                  ) : <span className="text-muted">(none)</span>}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <Button variant="success" className="me-2" onClick={() => {
-        const s = structuredClone(props.store);
-        for (const i of parsed) {
-          s.items.push(i);
-        }
-        props.setStore(s);
-        props.onClose();
-      }}>OK</Button>
-      <Button variant="secondary" onClick={props.onClose}>Abort</Button>
-    </>
-  );
-}
-
 
 const AddAdvanced = (props: { store: Store, setStore: (store: Store) => void, onClose: () => void }) => {
   const [lines, setLines] = useState<string>("");
@@ -150,7 +103,10 @@ const AddAdvanced = (props: { store: Store, setStore: (store: Store) => void, on
       </div>
       <Button variant="success" className="me-2" onClick={() => {
         const s = structuredClone(props.store);
-        // todo(Gustav): implement me
+        for (const prop of parsed) {
+          const oprop = prop.result;
+          s.items.push({ properties: oprop, tags: [] });
+        }
         props.setStore(s);
         props.onClose();
       }}>OK</Button>
@@ -223,21 +179,23 @@ const TagEdit = (props: { tags: string[], setTags: (tags: string[]) => void }) =
   );
 }
 
-const is_excluded = (item: Item, contains: string) => {
-  const item_name = item.name.toLowerCase();
+const is_excluded = (evala: EvalFunction, item: Item, contains: string) => {
+  const name = evaluation(evala, item.properties);
+  if (name === undefined) return false;
+  const item_name = name.toLowerCase();
   const search_term = contains.toLowerCase();
   const index = item_name.indexOf(search_term);
   return index < 0;
 }
 
-const AddTagsToFiltered = (props: { store: Store, setStore: (store: Store) => void, onClose: () => void }) => {
+const AddTagsToFiltered = (props: { eval: EvalFunction, store: Store, setStore: (store: Store) => void, onClose: () => void }) => {
   const [contains, setContains] = useState("");
   const [newTags, setNewTags] = useState(new Array<string>());
 
   const onOk = () => {
     props.setStore({
       ...props.store, items: props.store.items.map((item): Item => {
-        if (is_excluded(item, contains)) {
+        if (is_excluded(props.eval, item, contains)) {
           return item;
         }
         return { ...item, tags: item.tags.concat(newTags).reduce(add_tag, []) };
@@ -266,7 +224,7 @@ const AddTagsToFiltered = (props: { store: Store, setStore: (store: Store) => vo
 
 
 const AddEdit = (props: { index: number | null, store: Store, setStore: (store: Store) => void, onClose: () => void }) => {
-  const [item, setItem] = useState<Item>(() => props.index !== null ? structuredClone(props.store.items[props.index]) : { name: "", url: "", tags: [] });
+  const [item, setItem] = useState<Item>(() => props.index !== null ? structuredClone(props.store.items[props.index]) : { properties: new Map<string, string>(), tags: [] });
 
   const setTags = (newTags: string[]) => {
     setItem(i => ({ ...i, tags: newTags }));
@@ -285,14 +243,14 @@ const AddEdit = (props: { index: number | null, store: Store, setStore: (store: 
 
   return (
     <Form>
-      <Form.Group className="mb-3">
-        <Form.Label className="fw-bold">Name</Form.Label>
-        <Form.Control type="text" value={item.name} onChange={ev => setItem(i => ({ ...i, name: ev.target.value }))} placeholder="Enter item name" />
-      </Form.Group>
-      <Form.Group className="mb-3">
-        <Form.Label className="fw-bold">Url</Form.Label>
-        <Form.Control type="text" value={item.url} onChange={ev => setItem(i => ({ ...i, url: ev.target.value }))} placeholder="Enter item URL" />
-      </Form.Group>
+      {
+        [...item.properties.entries()].map(([key, value], prop_index) => {
+          return <Form.Group className="mb-3" key={prop_index}>
+            <Form.Label className="fw-bold">{key}</Form.Label>
+            <Form.Control type="text" value={value} onChange={ev => setItem(i => ({ ...i, properties: new Map<string, string>([...i.properties, [key, ev.target.value]]) }))} placeholder={`Enter item ${key}`} />
+          </Form.Group>
+        })
+      }
       <Form.Group className="mb-3">
         <Form.Label className="fw-bold">Tags</Form.Label>
         <TagEdit tags={item.tags} setTags={setTags} />
@@ -306,6 +264,7 @@ const AddEdit = (props: { index: number | null, store: Store, setStore: (store: 
 }
 
 function App() {
+  const [pattern, setPattern] = useState<string>("%name%");
   const [store, setStoreData] = useState<Store>(() => {
     const loaded = load_store();
     if (loaded !== null) return loaded;
@@ -321,6 +280,8 @@ function App() {
     save_mode(m);
   }
 
+  const [patt, err] = parse_pattern(pattern);
+
   return (
     <>
       <Navbar bg="primary" variant="dark" expand="lg">
@@ -334,7 +295,6 @@ function App() {
             <Nav className="me-auto">
               <Nav.Link onClick={() => setMode("list")}>List</Nav.Link>
               <Nav.Link onClick={() => setMode("add")}>Add</Nav.Link>
-              <Nav.Link onClick={() => setMode("add_many")}>Add Many</Nav.Link>
               <Nav.Link onClick={() => setMode("add_pattern")}>Add Pattern</Nav.Link>
               <Nav.Link onClick={() => setMode("add_tags")}>Add Tags</Nav.Link>
             </Nav>
@@ -345,13 +305,19 @@ function App() {
         <Row className="justify-content-md-center">
           <Col md={8}>
             <main>
+              <CardDialog>
+                <Form.Group className="mb-3">
+                  <Form.Label className="fw-bold">Pattern</Form.Label>
+                  <Form.Control type="text" value={pattern} onChange={ev => setPattern(ev.target.value)} placeholder="Enter pattern" />
+                  {err && <div className="text-danger mt-2">Error: {err.type}</div>}
+                </Form.Group>
+              </CardDialog>
               <>
                 {mode === 'add' && (<CardDialog><AddEdit index={null} store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>)}
-                {mode === 'list' && (<StoreList store={store} setStore={setStore} />)}
-                {mode === 'add_many' && (<CardDialog><AddMany store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>)}
+                {mode === 'list' && (<StoreList eval={patt} store={store} setStore={setStore} />)}
                 {mode === 'add_pattern' && (<CardDialog><AddAdvanced store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>)}
-                {mode === 'add_tags' && (<><CardDialog><AddTagsToFiltered store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>
-                  <StoreList store={store} setStore={setStore} />
+                {mode === 'add_tags' && (<><CardDialog><AddTagsToFiltered eval={patt} store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>
+                  <StoreList eval={patt} store={store} setStore={setStore} />
                 </>)}
               </>
             </main>
