@@ -1,7 +1,7 @@
 const LOCAL_STORAGE_KEY = "store";
 const MODE_STORAGE_KEY = "mode";
 
-export type Mode = "list" | "add" | "add_pattern" | "add_tags" | "from_html";
+export type Mode = "list" | "add" | "add_from_lines" | "add_tags" | "add_from_html";
 
 interface GenericItem<T> {
   properties: T;
