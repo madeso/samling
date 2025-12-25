@@ -7,19 +7,18 @@ import { get_mode, load_store, save_mode, save_store, type Item, type Mode, type
 
 import Icon from '@mdi/react';
 import { mdiDelete } from '@mdi/js';
-import { DefaultFunctions, parse_pattern, type EvalFunction } from './pattern';
+import { parse_pattern, type EvalFunction } from './pattern';
 import { TagEdit } from './ui/TagEdit';
 import { add_tag } from './lib/taglib';
 import { CardDialog } from './ui/CardDialog';
 import { AddFromHtml } from './ui/AddFromHtml';
 import { AddFromLines } from './ui/AddFromLines';
+import { evaluation } from './lib/eval';
+import { is_excluded } from './lib/filter';
 
 const DeleteIcon = () => <Icon path={mdiDelete} size={1} color="red" title={"Delete"} />;
 
-const evaluation = (evala: EvalFunction, properties: Map<string, string>): string => {
-  const display = evala(DefaultFunctions(), properties);
-  return typeof display === 'string' ? display : display.type
-}
+
 
 const ItemDisplay = (props: { eval: EvalFunction, item: Item, item_index: number, store: Store, setStore: (store: Store) => void }) => {
   const [editing, setEditing] = useState(false);
@@ -66,14 +65,6 @@ const StoreList = (props: { eval: EvalFunction, store: Store, setStore: (store: 
   );
 }
 
-const is_excluded = (evala: EvalFunction, item: Item, contains: string) => {
-  const name = evaluation(evala, item.properties);
-  if (name === undefined) return false;
-  const item_name = name.toLowerCase();
-  const search_term = contains.toLowerCase();
-  const index = item_name.indexOf(search_term);
-  return index < 0;
-}
 
 const AddTagsToFiltered = (props: { eval: EvalFunction, store: Store, setStore: (store: Store) => void, onClose: () => void }) => {
   const [contains, setContains] = useState("");
