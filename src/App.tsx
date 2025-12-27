@@ -5,19 +5,14 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { Container, Row, Col, Button, Navbar, Nav, Form, Image, ListGroup } from 'react-bootstrap';
 import { get_mode, load_store, save_mode, save_store, type Item, type Mode, type Store } from './store';
 
-import Icon from '@mdi/react';
-import { mdiDelete } from '@mdi/js';
 import { parse_pattern, type EvalFunction } from './pattern';
-import { TagEdit } from './ui/TagEdit';
-import { add_tag } from './lib/taglib';
 import { CardDialog } from './ui/CardDialog';
 import { AddFromHtml } from './ui/AddFromHtml';
 import { AddFromLines } from './ui/AddFromLines';
 import { evaluation } from './lib/eval';
-import { is_excluded } from './lib/filter';
 import { AddEdit } from './ui/AddEdit';
-
-const DeleteIcon = () => <Icon path={mdiDelete} size={1} color="red" title={"Delete"} />;
+import { AddTags } from './ui/AddTags';
+import { DeleteIcon } from './ui/icons';
 
 
 
@@ -66,40 +61,6 @@ const StoreList = (props: { eval: EvalFunction, store: Store, setStore: (store: 
   );
 }
 
-
-const AddTagsToFiltered = (props: { eval: EvalFunction, store: Store, setStore: (store: Store) => void, onClose: () => void }) => {
-  const [contains, setContains] = useState("");
-  const [newTags, setNewTags] = useState(new Array<string>());
-
-  const onOk = () => {
-    props.setStore({
-      ...props.store, items: props.store.items.map((item): Item => {
-        if (is_excluded(props.eval, item, contains)) {
-          return item;
-        }
-        return { ...item, tags: item.tags.concat(newTags).reduce(add_tag, []) };
-      })
-    });
-    props.onClose();
-  };
-
-  return (
-    <Form>
-      <Form.Group className="mb-3">
-        <Form.Label className="fw-bold">Name</Form.Label>
-        <Form.Control type="text" value={contains} onChange={ev => setContains(ev.target.value)} placeholder="Enter filter" />
-      </Form.Group>
-      <Form.Group className="mb-3">
-        <Form.Label className="fw-bold">Tags</Form.Label>
-        <TagEdit tags={newTags} setTags={setNewTags} />
-      </Form.Group>
-      <div className="d-flex justify-content-end gap-2 mt-3">
-        <Button variant="success" onClick={onOk}>OK</Button>
-        <Button variant="secondary" onClick={props.onClose}>Abort</Button>
-      </div>
-    </Form>
-  );
-}
 
 
 
@@ -159,7 +120,7 @@ function App() {
                 {mode === 'list' && (<StoreList eval={patt} store={store} setStore={setStore} />)}
                 {mode === 'add_from_lines' && (<CardDialog><AddFromLines store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>)}
                 {mode === 'add_from_html' && (<CardDialog><AddFromHtml store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>)}
-                {mode === 'add_tags' && (<><CardDialog><AddTagsToFiltered eval={patt} store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>
+                {mode === 'add_tags' && (<><CardDialog><AddTags eval={patt} store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>
                   <StoreList eval={patt} store={store} setStore={setStore} />
                 </>)}
               </>
