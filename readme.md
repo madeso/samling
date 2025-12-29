@@ -5,7 +5,6 @@ Local only app for things you own and seeing if how much of overlap there is wit
 Swedish for "collection".
 
 ### Todo
-* Allow add dialog to add and remove items
 * Fix case insensitive pattern names
 * fix styling and ux
 * add csv import/export
