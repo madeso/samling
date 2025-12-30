@@ -1,5 +1,5 @@
 import { Button, ListGroup } from "react-bootstrap";
-import type { EvalFunction } from "../pattern";
+import { type EvalFunction } from "../pattern";
 import type { Item, Store } from "../store";
 import { DeleteIcon } from "./icons";
 import { AddEdit } from "./AddEdit";
@@ -50,4 +50,3 @@ export const StoreList = (props: { eval: EvalFunction, store: Store, setStore: (
     </ListGroup>
   );
 }
-

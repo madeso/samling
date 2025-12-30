@@ -2,23 +2,19 @@ import { useState } from 'react'
 import logo from '/logo.svg';
 import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Container, Row, Col, Navbar, Nav, Form, Image } from 'react-bootstrap';
+import { Container, Row, Col, Navbar, Nav, Image } from 'react-bootstrap';
 import { get_mode, load_store, save_mode, save_store, type Mode, type Store } from './store';
 
-import { parse_pattern } from './pattern';
 import { CardDialog } from './ui/CardDialog';
 import { AddFromHtml } from './ui/AddFromHtml';
 import { AddFromLines } from './ui/AddFromLines';
 import { AddEdit } from './ui/AddEdit';
 import { AddTags } from './ui/AddTags';
 import { StoreList } from './ui/StoreList';
-
-
-
-
+import { useStoreListConfig } from './ui/StoreList.hooks';
 
 function App() {
-  const [pattern, setPattern] = useState<string>("%name%");
+  const {pattern: patt, ui: store_settings} = useStoreListConfig();
   const [store, setStoreData] = useState<Store>(() => {
     const loaded = load_store();
     if (loaded !== null) return loaded;
@@ -33,8 +29,6 @@ function App() {
     setModeData(m);
     save_mode(m);
   }
-
-  const [patt, err] = parse_pattern(pattern);
 
   return (
     <>
@@ -60,14 +54,7 @@ function App() {
         <Row className="justify-content-md-center">
           <Col md={8}>
             <main>
-              {mode === 'list' && 
-              <CardDialog>
-                <Form.Group className="mb-3">
-                  <Form.Label className="fw-bold">Pattern</Form.Label>
-                  <Form.Control type="text" value={pattern} onChange={ev => setPattern(ev.target.value)} placeholder="Enter pattern" />
-                  {err && <div className="text-danger mt-2">Error: {err.type}</div>}
-                </Form.Group>
-              </CardDialog>}
+              {mode === 'list' && store_settings}
               <>
                 {mode === 'add' && (<CardDialog><AddEdit index={null} store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>)}
                 {mode === 'list' && (<StoreList eval={patt} store={store} setStore={setStore} />)}
