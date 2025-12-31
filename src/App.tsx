@@ -14,7 +14,7 @@ import { StoreList } from './ui/StoreList';
 import { useStoreListConfig } from './ui/StoreList.hooks';
 
 function App() {
-  const {pattern: patt, ui: store_settings} = useStoreListConfig();
+  const {config, ui: store_settings} = useStoreListConfig();
   const [store, setStoreData] = useState<Store>(() => {
     const loaded = load_store();
     if (loaded !== null) return loaded;
@@ -57,11 +57,11 @@ function App() {
               {mode === 'list' && store_settings}
               <>
                 {mode === 'add' && (<CardDialog><AddEdit index={null} store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>)}
-                {mode === 'list' && (<StoreList eval={patt} store={store} setStore={setStore} />)}
+                {mode === 'list' && (<StoreList config={config} store={store} setStore={setStore} />)}
                 {mode === 'add_from_lines' && (<CardDialog><AddFromLines store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>)}
                 {mode === 'add_from_html' && (<CardDialog><AddFromHtml store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>)}
-                {mode === 'add_tags' && (<><CardDialog><AddTags eval={patt} store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>
-                  <StoreList eval={patt} store={store} setStore={setStore} />
+                {mode === 'add_tags' && (<><CardDialog><AddTags config={config} store={store} setStore={setStore} onClose={() => { setMode('list'); }} /></CardDialog>
+                  <StoreList config={config} store={store} setStore={setStore} />
                 </>)}
               </>
             </main>
